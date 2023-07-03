@@ -1,0 +1,26 @@
+        if self.request.method=='GET':
+            try:
+                q1=FriendRequest.objects.filter(request_from=user,request_to=pk)
+                if len(q1) != 0: 
+                    friend=q1.values()[0]['request_to_id']
+                    return User.objects.get(pk=friend)
+            
+            except User.DoesNotExist:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+
+        elif self.request.method=='PUT':
+            pass
+
+        elif self.request.method=='DELETE':
+            try:
+                return FriendRequest.objects.filter(request_from=user,request_to=pk)
+            except:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+
+
+
+
+
+

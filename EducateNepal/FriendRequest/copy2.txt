@@ -1,0 +1,109 @@
+from django.shortcuts import render
+from rest_framework import viewsets,generics
+from django.contrib.auth.models import User
+from rest_framework.response import Response
+from . models import FriendRequest
+from . serializers import FriendRequestSerializer
+from rest_framework import permissions
+from rest_framework.decorators import action
+from Post.permissions import IsOwnerOrReadOnly
+from Post.serializers import UserSerializer
+from django.http import Http404, request
+from rest_framework import status
+
+# Create your views here.
+
+
+class FriendRequestViewSet(viewsets.ViewSet):
+    """
+    Example empty viewset demonstrating the standard
+    actions that will be handled by a router class.
+
+    If you're using format suffixes, make sure to also include
+    the `format=None` keyword argument for each action.
+    """
+    def get_queryset(self):
+        user=self.request.user.pk
+        q1=FriendRequest.objects.filter(request_from=user,status='Accepted')
+        q2=FriendRequest.objects.filter(request_to=user,status='Accepted')
+        if len(q1) == 0 and len(q2) == 0:
+            search_fields=[]
+        elif len(q1) != 0 and len(q2) == 0:
+            request_to_user=q1.values()[0]['request_to_id']
+            search_fields=[request_to_user]
+        elif len(q1) == 0 and len(q2) != 0:
+            request_from_user=q2.values()[0]['request_from_id']
+            search_fields=[request_from_user]
+        else:
+            request_to_user=q1.values()[0]['request_to_id']
+            request_from_user=q2.values()[0]['request_from_id']
+            search_fields=[request_to_user,request_from_user]
+        friends=User.objects.filter(id__in=search_fields).values()
+        return friends
+
+    def get_object(self,pk):
+        user=self.request.user.pk
+        try:
+            if self.request.method=='GET':
+                q1=FriendRequest.objects.filter(request_from=user,request_to=pk)
+                if len(q1) != 0: 
+                    friend=q1.values()[0]['request_to_id']
+                    return User.objects.get(pk=friend)
+
+            elif self.request.method=='PUT' or self.request.method=='DELETE':
+                return FriendRequest.objects.filter(request_from=user,request_to=pk)
+            
+        except User.DoesNotExist:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+
+    def list(self, request):
+        friends=self.get_queryset()
+        serializer = UserSerializer(friends, many=True)
+        return Response(serializer.data)
+
+    def create(self, request):
+        serializer = FriendRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def retrieve(self, request, pk=None):
+        to = self.get_object(pk)
+        serializer = UserSerializer(to)
+        return Response(serializer.data)
+        
+
+    def update(self, request, pk=None):
+        friend=self.get_object(pk)
+        serializer=FriendRequestSerializer(friend,data=request.data)
+        if serializer.is_valid():
+           serializer.save()
+           return Response(serializer.data)    
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def destroy(self, request, pk=None):
+        friend=self.get_object(pk)
+        friend.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+
+
+
+
+
+
+
+
+
+      
+        
+    
+
+
+
+
+
+

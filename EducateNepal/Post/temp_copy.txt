@@ -1,0 +1,74 @@
+-------------Generics View--------------------
+class PostList(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
+class PostDetail(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly,IsOwnerOrReadOnly]
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+
+
+
+
+
+class UserList(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+
+class UserDetail(generics.RetrieveAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+
+
+
+
+
+
+----If Needed-----
+
+
+  def perform_create(self, serializer):
+        serializer.save(username=self.request.user)
+    
+    def set_password(self, request, pk=None):
+        user = self.get_object()
+        serializer = PasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            user.set_password(serializer.validated_data['password'])
+            user.save()
+            return Response({'status': 'password set'})
+        else:
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
+
+
+    @action(detail=False)
+    def recent_users(self, request):
+        recent_users = User.objects.all().order_by('-last_login')
+
+        page = self.paginate_queryset(recent_users)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(recent_users, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['put'], name='Change Password')
+    def password(self, request, pk=None):
+        """Update the user's password."""
+        ...
+ 
+        
+
+    @password.mapping.delete
+    def delete_password(self, request, pk=None):
+        """Delete the user's password."""
+        ...
